@@ -658,6 +658,45 @@ input:checked + .slider:before { transform:translateX(18px); }
 .bm-img-preview { max-width:100%; max-height:200px; object-fit:contain; display:none; }
 .bm-img-ph { color:#b0bec5; font-size:12px; text-align:center; padding:16px; }
 
+/* ── DROP ZONE STATES ─────────────────────────────────── */
+.bm-img-preview-wrap { cursor:pointer; position:relative; transition:border-color .15s, background .15s; }
+.bm-img-preview-wrap:hover { border-color:var(--cem-blue); background:#f0f5ff; }
+.bm-img-preview-wrap.dragover { border-color:var(--cem-blue); background:#dbeafe; border-style:solid; }
+.bm-drop-hint {
+  position:absolute; bottom:0; left:0; right:0;
+  background:rgba(26,79,138,.85); color:#fff; font-size:11px; font-weight:600;
+  text-align:center; padding:5px; border-radius:0 0 4px 4px;
+  opacity:0; transition:opacity .15s; pointer-events:none;
+}
+.bm-img-preview-wrap:hover .bm-drop-hint,
+.bm-img-preview-wrap.dragover .bm-drop-hint { opacity:1; }
+
+/* ── BULK UPLOAD PANEL ────────────────────────────────── */
+#bm-bulk-panel {
+  display:none; background:#f5f8ff; border-bottom:2px solid var(--cem-border);
+  padding:10px 14px; flex-direction:column; gap:8px;
+}
+#bm-bulk-panel.open { display:flex; }
+#bm-bulk-drop-zone {
+  border:2px dashed var(--cem-blue); border-radius:6px; background:#fff;
+  min-height:60px; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:3px; cursor:pointer; transition:background .15s;
+  padding:12px 8px; text-align:center;
+}
+#bm-bulk-drop-zone.dragover { background:#dbeafe; border-style:solid; }
+#bm-bulk-drop-zone p { font-size:12px; color:var(--cem-blue); font-weight:700; margin:0; }
+#bm-bulk-drop-zone span { font-size:10px; color:#888; }
+#bm-bulk-result { max-height:90px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+.bm-bulk-row { padding:3px 8px; border-radius:3px; background:#e8f5e9; color:var(--cem-green); font-size:11px; }
+.bm-bulk-row.warn { background:#fff3e0; color:var(--cem-orange); }
+#btn-bm-bulk {
+  background:#fff; border:1px solid var(--cem-blue); color:var(--cem-blue);
+  border-radius:4px; padding:4px 10px; font-size:11px; font-weight:700; cursor:pointer;
+  white-space:nowrap;
+}
+#btn-bm-bulk:hover { background:#e8f0fe; }
+#btn-bm-bulk.active { background:var(--cem-blue); color:#fff; }
+
 /* Status toast */
 #bm-toast {
   position:fixed; bottom:60px; left:50%; transform:translateX(-50%);
@@ -996,7 +1035,22 @@ input:checked + .slider:before { transform:translateX(18px); }
     <div id="bm-sidebar">
       <div id="bm-sidebar-header">
         <span id="bm-sidebar-title">Questions</span>
-        <button id="btn-bm-add" onclick="bmAddQuestion()">＋ Add Item</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button id="btn-bm-bulk" onclick="toggleBulkPanel()" title="Bulk upload images for this section">📥 Bulk</button>
+          <button id="btn-bm-add" onclick="bmAddQuestion()">＋ Add Item</button>
+        </div>
+      </div>
+      <!-- Bulk upload panel -->
+      <div id="bm-bulk-panel">
+        <div id="bm-bulk-drop-zone"
+          ondragover="bmBulkDragOver(event)" ondragleave="bmBulkDragLeave()" ondrop="bmBulkDrop(event)"
+          onclick="document.getElementById('bm-bulk-file-input').click()">
+          <p>📂 Drop multiple images here</p>
+          <span>or click to browse — images are auto-assigned by their number (e.g. _001_, _002_)</span>
+        </div>
+        <input type="file" id="bm-bulk-file-input" accept="image/*" multiple style="display:none"
+          onchange="bmBulkFileSelect(event)" />
+        <div id="bm-bulk-result"></div>
       </div>
       <div id="bm-q-list">
         <!-- injected by JS -->
@@ -1021,10 +1075,15 @@ input:checked + .slider:before { transform:translateX(18px); }
                 oninput="bmPreviewImg('bm-q-img-path','bm-q-img-preview')" />
               <div class="bm-hint">Relative path from this HTML file, or a full URL. Leave blank if not yet assigned.</div>
             </div>
-            <div class="bm-img-preview-wrap">
+            <div class="bm-img-preview-wrap" id="bm-q-drop-zone"
+              onclick="document.getElementById('bm-q-file-input').click()"
+              ondragover="bmDragOver(event,this)" ondragleave="bmDragLeave(this)" ondrop="bmDrop(event,'q')">
               <img id="bm-q-img-preview" class="bm-img-preview" src="" alt="stem preview" />
-              <div class="bm-img-ph" id="bm-q-img-ph">No image set — enter a path above to preview</div>
+              <div class="bm-img-ph" id="bm-q-img-ph">📁 Click or drag &amp; drop image here</div>
+              <div class="bm-drop-hint">Drop image to upload</div>
             </div>
+            <input type="file" id="bm-q-file-input" accept="image/*" style="display:none"
+              onchange="bmFileInputChange(event,'q')" />
           </div>
         </div>
 
@@ -1037,10 +1096,15 @@ input:checked + .slider:before { transform:translateX(18px); }
                 oninput="bmPreviewImg('bm-c-img-path','bm-c-img-preview')" />
               <div class="bm-hint">The image containing answer choices A–D. Leave blank if not yet assigned.</div>
             </div>
-            <div class="bm-img-preview-wrap">
+            <div class="bm-img-preview-wrap" id="bm-c-drop-zone"
+              onclick="document.getElementById('bm-c-file-input').click()"
+              ondragover="bmDragOver(event,this)" ondragleave="bmDragLeave(this)" ondrop="bmDrop(event,'c')">
               <img id="bm-c-img-preview" class="bm-img-preview" src="" alt="choices preview" />
-              <div class="bm-img-ph" id="bm-c-img-ph">No image set — enter a path above to preview</div>
+              <div class="bm-img-ph" id="bm-c-img-ph">📁 Click or drag &amp; drop image here</div>
+              <div class="bm-drop-hint">Drop image to upload</div>
             </div>
+            <input type="file" id="bm-c-file-input" accept="image/*" style="display:none"
+              onchange="bmFileInputChange(event,'c')" />
           </div>
         </div>
 
@@ -2047,6 +2111,130 @@ document.addEventListener('keydown', e => {
     case 'Escape': clearResponse(); break;
   }
 });
+
+/* ════════════════════════════════════════════════════════
+   DRAG & DROP  IMAGE UPLOAD
+════════════════════════════════════════════════════════ */
+
+/* Per-slot drop zone handlers */
+function bmDragOver(e, el) {
+  e.preventDefault(); e.stopPropagation();
+  el.classList.add('dragover');
+}
+function bmDragLeave(el) { el.classList.remove('dragover'); }
+
+function bmDrop(e, type) {
+  e.preventDefault(); e.stopPropagation();
+  const zoneId = type === 'q' ? 'bm-q-drop-zone' : 'bm-c-drop-zone';
+  document.getElementById(zoneId).classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')) { bmToast('⚠ Please drop an image file.'); return; }
+  bmLoadImageFile(file, type);
+}
+
+function bmFileInputChange(e, type) {
+  const file = e.target.files[0];
+  if (file) bmLoadImageFile(file, type);
+  e.target.value = '';
+}
+
+function bmLoadImageFile(file, type) {
+  const url      = URL.createObjectURL(file);
+  const inputId  = type === 'q' ? 'bm-q-img-path'   : 'bm-c-img-path';
+  const previewId= type === 'q' ? 'bm-q-img-preview' : 'bm-c-img-preview';
+  const phId     = type === 'q' ? 'bm-q-img-ph'      : 'bm-c-img-ph';
+
+  document.getElementById(inputId).value = url;
+  const img = document.getElementById(previewId);
+  const ph  = document.getElementById(phId);
+  img.src = url;
+  img.style.display = 'block';
+  ph.style.display  = 'none';
+  bmToast('✔ Image loaded: ' + file.name);
+}
+
+/* ── BULK UPLOAD PANEL ─────────────────────────────────── */
+function toggleBulkPanel() {
+  const panel = document.getElementById('bm-bulk-panel');
+  panel.classList.toggle('open');
+  document.getElementById('btn-bm-bulk').classList.toggle('active', panel.classList.contains('open'));
+  if (panel.classList.contains('open')) {
+    document.getElementById('bm-bulk-result').innerHTML = '';
+  }
+}
+
+function bmBulkDragOver(e) {
+  e.preventDefault();
+  document.getElementById('bm-bulk-drop-zone').classList.add('dragover');
+}
+function bmBulkDragLeave() {
+  document.getElementById('bm-bulk-drop-zone').classList.remove('dragover');
+}
+function bmBulkDrop(e) {
+  e.preventDefault();
+  document.getElementById('bm-bulk-drop-zone').classList.remove('dragover');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  if (!files.length) { bmToast('⚠ No image files found.'); return; }
+  bmBulkAssign(files);
+}
+function bmBulkFileSelect(e) {
+  const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+  if (files.length) bmBulkAssign(files);
+  e.target.value = '';
+}
+
+function bmBulkAssign(files) {
+  const sec = bm.draft[bm.activeSectionIdx];
+  const resultEl = document.getElementById('bm-bulk-result');
+  resultEl.innerHTML = '';
+  let matched = 0;
+
+  // Sort files by filename so numbering is consistent
+  files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+
+  files.forEach(file => {
+    const name = file.name;
+    // Detect choices vs question stem
+    const isChoices = /_c\./i.test(name) || /[-_]choices\./i.test(name);
+    // Extract first number from filename
+    const numMatch = name.match(/(\d+)/);
+    const num = numMatch ? parseInt(numMatch[1], 10) : null;
+    const url = URL.createObjectURL(file);
+
+    let row = document.createElement('div');
+
+    if (num !== null && num >= 1 && num <= sec.bank.length) {
+      // Assign to existing slot
+      const idx = num - 1;
+      if (isChoices) sec.bank[idx].choicesImg  = url;
+      else           sec.bank[idx].questionImg = url;
+      matched++;
+      row.className   = 'bm-bulk-row';
+      row.textContent = `✔ Item ${num} ${isChoices ? '(choices)' : '(question)'} ← ${name}`;
+    } else if (num === null || num > sec.bank.length) {
+      // Append as new item
+      const newQ = {
+        questionImg: isChoices ? null : url,
+        choicesImg:  isChoices ? url  : null,
+        answer: 'A'
+      };
+      sec.bank.push(newQ);
+      matched++;
+      row.className   = 'bm-bulk-row warn';
+      row.textContent = `+ New item ← ${name}`;
+    }
+    resultEl.appendChild(row);
+  });
+
+  bmRenderList();
+  bmUpdateTabCounts();
+  bmUpdateFooterInfo();
+  if (bm.activeItemIdx !== null) {
+    bmShowEditor(sec.bank[bm.activeItemIdx]);
+  }
+  bmToast(`✔ ${matched} image${matched !== 1 ? 's' : ''} assigned.`);
+}
 
 /* ─── START ─── */
 init();
