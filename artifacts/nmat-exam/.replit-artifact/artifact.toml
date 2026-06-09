@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "CEM NMAT Mock Exam"
+version = "1.0.0"
+id = "artifacts/nmat-exam"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18531
+
+[services.development]
+run = "pnpm --filter @workspace/nmat-exam run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nmat-exam", "run", "build" ]
+publicDir = "artifacts/nmat-exam/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18531"
+BASE_PATH = "/"
