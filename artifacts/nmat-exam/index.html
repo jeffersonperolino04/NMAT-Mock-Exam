@@ -1194,6 +1194,7 @@ const EXAM_BANK = {
   sections: [
     {
       name: 'Part I — Verbal',
+      folderKey: 'p1_verbal',
       timeSeconds: 1800,   // 30 min
       drawCount: 30,
       bank: [
@@ -1206,6 +1207,7 @@ const EXAM_BANK = {
     },
     {
       name: 'Part I — Inductive Reasoning',
+      folderKey: 'p1_inductive',
       timeSeconds: 1800,
       drawCount: 30,
       bank: [
@@ -1217,6 +1219,7 @@ const EXAM_BANK = {
     },
     {
       name: 'Part I — Quantitative',
+      folderKey: 'p1_quant',
       timeSeconds: 1800,
       drawCount: 30,
       bank: [
@@ -1228,6 +1231,7 @@ const EXAM_BANK = {
     },
     {
       name: 'Part I — Perceptual Acuity',
+      folderKey: 'p1_percept',
       timeSeconds: 1800,
       drawCount: 30,
       bank: [
@@ -1238,6 +1242,7 @@ const EXAM_BANK = {
     },
     {
       name: 'Part II — Biology',
+      folderKey: 'p2_biology',
       timeSeconds: 2250,   // ~37.5 min (2.5 hrs ÷ 4)
       drawCount: 30,
       bank: [
@@ -1248,6 +1253,7 @@ const EXAM_BANK = {
     },
     {
       name: 'Part II — Physics',
+      folderKey: 'p2_physics',
       timeSeconds: 2250,
       drawCount: 30,
       bank: [
@@ -1258,6 +1264,7 @@ const EXAM_BANK = {
     },
     {
       name: 'Part II — Social Science',
+      folderKey: 'p2_socsci',
       timeSeconds: 2250,
       drawCount: 30,
       bank: [
@@ -1268,6 +1275,7 @@ const EXAM_BANK = {
     },
     {
       name: 'Part II — Chemistry',
+      folderKey: 'p2_chem',
       timeSeconds: 2250,
       drawCount: 30,
       bank: [
@@ -1614,8 +1622,53 @@ const state = {
   reviewFilter: 'all', reviewSectionFilter: 'all',
 };
 
+async function imageExists(url) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload  = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = url + '?_p=' + Date.now();
+    setTimeout(() => { img.src = ''; resolve(false); }, 4000);
+  });
+}
+
+async function probeSection(sec) {
+  if (!sec.folderKey) return;
+  const MAX_PROBE = 300;
+  const key = sec.folderKey;
+  const folder = `questions/${key}/`;
+  let found = 0;
+  for (let i = 1; i <= MAX_PROBE; i++) {
+    const n = String(i).padStart(3, '0');
+    const ok = await imageExists(`${folder}${key}_${n}_q.png`);
+    if (ok) { found = i; } else { break; }
+  }
+  while (sec.bank.length < found) {
+    const idx = sec.bank.length + 1;
+    const n = String(idx).padStart(3, '0');
+    sec.bank.push({
+      questionImg: `${folder}${key}_${n}_q.png`,
+      choicesImg:  `${folder}${key}_${n}_c.png`,
+      answer: 'A'
+    });
+  }
+}
+
+async function autoExpandBank() {
+  try {
+    await Promise.all(EXAM_BANK.sections.map(probeSection));
+  } catch (e) {
+    console.warn('autoExpandBank error (non-fatal):', e);
+  }
+}
+
 async function init() {
-  await loadAnswerKey();
+  try {
+    await autoExpandBank();
+    await loadAnswerKey();
+  } catch (e) {
+    console.warn('init error (non-fatal):', e);
+  }
   bmInit();
 }
 
