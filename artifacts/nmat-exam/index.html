@@ -1020,7 +1020,7 @@ input:checked + .slider:before { transform:translateX(18px); }
     </div>
     <div class="bm-header-actions">
       <button id="btn-bm-export" onclick="openExportModal()">⬇ Export Bank (JSON)</button>
-      <button id="btn-bm-save"   onclick="bmSaveAll()">💾 Save Changes</button>
+      <button id="btn-bm-save"   onclick="bmSaveAll()" title="Saves answers and downloads answers.json — replace public/answers.json in the project to make permanent">💾 Save &amp; Export Key</button>
     </div>
   </div>
 
@@ -1505,7 +1505,8 @@ function bmSaveAll() {
   EXAM_BANK.sections.forEach((sec, i) => {
     sec.bank = bm.draft[i].bank.map(q => ({ ...q }));
   });
-  bmToast('✔ All changes saved to the question bank.');
+  downloadAnswerKey();
+  bmToast('✔ Saved — answers.json downloaded. Replace public/answers.json in your project and push to Vercel to make the key permanent.');
 }
 
 function bmUpdateTabCounts() {
@@ -1613,8 +1614,9 @@ const state = {
   reviewFilter: 'all', reviewSectionFilter: 'all',
 };
 
-function init() {
-  bmInit();  // show bank manager first
+async function init() {
+  await loadAnswerKey();
+  bmInit();
 }
 
 function buildConfigRows(containerId, prefix) {
@@ -2234,6 +2236,44 @@ function bmBulkAssign(files) {
     bmShowEditor(sec.bank[bm.activeItemIdx]);
   }
   bmToast(`✔ ${matched} image${matched !== 1 ? 's' : ''} assigned.`);
+}
+
+/* ════════════════════════════════════════════════════════
+   ANSWER KEY  — persistent via public/answers.json
+════════════════════════════════════════════════════════ */
+
+async function loadAnswerKey() {
+  try {
+    const res = await fetch('answers.json?_=' + Date.now());
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!Array.isArray(data.answers)) return;
+    data.answers.forEach((sectionAnswers, si) => {
+      const sec = EXAM_BANK.sections[si];
+      if (!sec) return;
+      sectionAnswers.forEach((ans, qi) => {
+        if (sec.bank[qi]) sec.bank[qi].answer = ans;
+      });
+    });
+  } catch (_) {
+    // answers.json not found or malformed — keep hardcoded defaults
+  }
+}
+
+function downloadAnswerKey() {
+  const data = {
+    updatedAt: new Date().toISOString(),
+    answers: EXAM_BANK.sections.map(sec => sec.bank.map(q => q.answer || 'A'))
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'answers.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /* ─── START ─── */
