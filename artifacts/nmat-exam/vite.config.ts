@@ -6,6 +6,7 @@ const port = Number(process.env.PORT ?? 3000);
 export default defineConfig({
   base: "/",
   root: path.resolve(import.meta.dirname),
+  publicDir: path.resolve(import.meta.dirname, "public"), // explicit
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
