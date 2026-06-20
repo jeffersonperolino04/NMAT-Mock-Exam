@@ -2323,12 +2323,13 @@ async function loadAnswerKey() {
     const res = await fetch('answers.json?_=' + Date.now());
     if (!res.ok) return;
     const data = await res.json();
-    if (!Array.isArray(data.answers)) return;
-    data.answers.forEach((sectionAnswers, si) => {
-      const sec = EXAM_BANK.sections[si];
-      if (!sec) return;
-      sectionAnswers.forEach((ans, qi) => {
-        if (sec.bank[qi]) sec.bank[qi].answer = ans;
+    if (!data.answers || typeof data.answers !== 'object' || Array.isArray(data.answers)) return;
+    const keyMap = data.answers;
+    EXAM_BANK.sections.forEach(sec => {
+      sec.bank.forEach(q => {
+        if (!q.questionImg) return;
+        const filename = q.questionImg.split('/').pop();
+        if (keyMap[filename] !== undefined) q.answer = keyMap[filename];
       });
     });
   } catch (_) {
@@ -2337,9 +2338,18 @@ async function loadAnswerKey() {
 }
 
 function downloadAnswerKey() {
+  const answerMap = {};
+  EXAM_BANK.sections.forEach(sec => {
+    sec.bank.forEach(q => {
+      if (q.questionImg) {
+        const filename = q.questionImg.split('/').pop();
+        answerMap[filename] = q.answer || 'A';
+      }
+    });
+  });
   const data = {
     updatedAt: new Date().toISOString(),
-    answers: EXAM_BANK.sections.map(sec => sec.bank.map(q => q.answer || 'A'))
+    answers: answerMap
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
