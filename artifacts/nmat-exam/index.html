@@ -1534,11 +1534,15 @@ function bmAddQuestion() {
   bmToast('New item added — fill in the details and click Save This Item.');
 }
 
-function bmSaveAll() {
-  // commit draft to EXAM_BANK
+function bmCommit() {
+  // commit draft to EXAM_BANK without exposing the answer key
   EXAM_BANK.sections.forEach((sec, i) => {
     sec.bank = bm.draft[i].bank.map(q => ({ ...q }));
   });
+}
+
+function bmSaveAll() {
+  bmCommit();
   downloadAnswerKey();
   bmToast('✔ Saved — answers.json downloaded. Replace public/answers.json in your project and push to Vercel to make the key permanent.');
 }
@@ -1568,9 +1572,7 @@ function bmUpdateFooterInfo() {
 }
 
 function bmProceedToTest() {
-  // save draft first
-  bmSaveAll();
-  // hide bank manager, show splash
+  bmCommit();
   document.getElementById('bank-manager').classList.remove('open');
   buildSplashGrid();
   document.getElementById('splash-page').classList.add('open');
