@@ -819,6 +819,9 @@ input:checked + .slider:before { transform:translateX(18px); }
       <div class="choice-row" id="choice-D" onclick="selectChoice('D')">
         <div class="choice-radio"></div><div class="choice-label">D</div><div class="choice-text">Choice D</div>
       </div>
+      <div class="choice-row" id="choice-E" onclick="selectChoice('E')">
+        <div class="choice-radio"></div><div class="choice-label">E</div><div class="choice-text">Choice E</div>
+      </div>
     </div>
     <div id="choices-actions">
       <button id="btn-revisit" onclick="toggleRevisit()">☆ Revisit Later</button>
@@ -1140,6 +1143,7 @@ input:checked + .slider:before { transform:translateX(18px); }
                 <label class="bm-ans-opt" onclick="bmSelectAnswer(this,'B')"><input type="radio" name="bm-ans" value="B"/>B</label>
                 <label class="bm-ans-opt" onclick="bmSelectAnswer(this,'C')"><input type="radio" name="bm-ans" value="C"/>C</label>
                 <label class="bm-ans-opt" onclick="bmSelectAnswer(this,'D')"><input type="radio" name="bm-ans" value="D"/>D</label>
+                <label class="bm-ans-opt" onclick="bmSelectAnswer(this,'E')"><input type="radio" name="bm-ans" value="E"/>E</label>
               </div>
             </div>
           </div>
@@ -1473,7 +1477,7 @@ function bmSelectAnswer(el, letter) {
 
 function bmSaveCurrentItem() {
   if (bm.activeItemIdx === null) return;
-  if (!bm.activeAnswer) { bmToast('⚠ Please select a correct answer (A, B, C, or D).'); return; }
+  if (!bm.activeAnswer) { bmToast('⚠ Please select a correct answer (A, B, C, D, or E).'); return; }
 
   const q = bm.draft[bm.activeSectionIdx].bank[bm.activeItemIdx];
   q.questionImg = document.getElementById('bm-q-img-path').value.trim() || null;
@@ -1819,7 +1823,7 @@ function renderQuestion() {
       <small style="font-size:11px;">Path: <code>questions/s${state.sectionIdx+1}_q${String(state.current+1).padStart(2,'0')}_choices.png</code></small>`;
   }
 
-  ['A','B','C','D'].forEach(l => {
+  ['A','B','C','D','E'].forEach(l => {
     document.getElementById(`choice-${l}`).classList.toggle('selected', r.answer === l);
   });
 
@@ -1987,7 +1991,7 @@ function renderReviewCards() {
 
       const statusText = isSkipped ? '— Skipped' : isCorrect ? '✔ Correct' : '✘ Wrong';
       let pillsHTML = '<div class="choice-pills">';
-      ['A','B','C','D'].forEach(letter => {
+      ['A','B','C','D','E'].forEach(letter => {
         let cls = 'cp-neutral', icon = '';
         if (letter === q.answer)                       { cls = 'cp-correct'; icon = ' ✔'; }
         if (letter === userAns && letter !== q.answer) { cls = 'cp-wrong';   icon = ' ✘'; }
@@ -2185,6 +2189,7 @@ document.addEventListener('keydown', e => {
     case 'b': case 'B': selectChoice('B'); break;
     case 'c': case 'C': selectChoice('C'); break;
     case 'd': case 'D': selectChoice('D'); break;
+    case 'e': case 'E': selectChoice('E'); break;
     case 'r': case 'R': toggleRevisit(); break;
     case 'Escape': clearResponse(); break;
   }
