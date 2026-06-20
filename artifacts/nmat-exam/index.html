@@ -342,18 +342,19 @@ body {
 .review-answers .your-ans { font-weight:600; }
 .review-answers .correct-ans { font-weight:600; color:var(--correct-bg); }
 
-.review-item-body { display:flex; gap:0; min-height:100px; }
+.review-item-body { display:flex; gap:0; align-items:stretch; }
 .review-q-img {
   flex:1; padding:14px 16px; border-right:1px solid var(--cem-border);
-  display:flex; align-items:center; justify-content:center; background:#fafafa;
+  display:flex; align-items:flex-start; justify-content:center; background:#fafafa;
+  overflow:visible;
 }
-.review-q-img img  { max-width:100%; max-height:220px; object-fit:contain; }
+.review-q-img img  { max-width:100%; width:100%; height:auto; display:block; }
 .review-q-img .ph  { color:#bbb; font-size:12px; text-align:center; }
 .review-c-img {
-  width:260px; flex-shrink:0; padding:14px 16px;
+  width:280px; flex-shrink:0; padding:14px 16px;
   display:flex; flex-direction:column; gap:8px; align-items:flex-start;
 }
-.review-c-img img { max-width:100%; max-height:180px; object-fit:contain; }
+.review-c-img img { max-width:100%; width:100%; height:auto; display:block; }
 .review-c-img .ph  { color:#bbb; font-size:12px; }
 
 .choice-pills { display:flex; flex-direction:column; gap:6px; width:100%; }
@@ -2002,10 +2003,10 @@ function renderReviewCards() {
       pillsHTML += '</div>';
 
       const qImgHTML = q.questionImg
-        ? `<img src="${q.questionImg}" alt="Q${qi+1}" />`
+        ? `<img src="${q.questionImg}" alt="Q${qi+1}" loading="eager" decoding="sync" />`
         : `<div class="ph">📄 Q${qi+1} stem<br><small>not yet assigned</small></div>`;
       const cImgHTML = q.choicesImg
-        ? `<img src="${q.choicesImg}" alt="choices" />`
+        ? `<img src="${q.choicesImg}" alt="choices" loading="eager" decoding="sync" />`
         : `<div class="ph">🗂 choices image<br><small>not yet assigned</small></div>`;
       const bookmarkBadge = isBookmark
         ? `<span style="font-size:11px;color:var(--cem-orange);font-weight:700;">☆ Bookmarked</span>` : '';
