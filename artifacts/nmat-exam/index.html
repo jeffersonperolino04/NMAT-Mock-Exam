@@ -48,12 +48,13 @@ body {
 #header .logo { color:#fff; font-weight:700; font-size:18px; letter-spacing:1px; white-space:nowrap; }
 #header .logo span { color:#90caf9; font-size:11px; font-weight:400; margin-left:6px; }
 #header .test-title { color:#fff; font-size:13px; font-weight:600; text-align:center; flex:1; }
-.timer-box {
-  background:#0d3a6e; border:1px solid #4fc3f7; border-radius:4px;
-  padding:4px 10px; text-align:center; min-width:90px;
+.timer-compact {
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; color:#90caf9; font-weight:600; white-space:nowrap;
 }
-.timer-box .t-label { color:#90caf9; font-size:9px; text-transform:uppercase; letter-spacing:.5px; }
-.timer-box .t-value { color:#fff; font-size:16px; font-weight:700; font-family:'Courier New',monospace; }
+.timer-compact #timer-section {
+  font-family:'Courier New',monospace; font-size:16px; font-weight:700; color:#fff;
+}
 #btn-finish-top {
   background:#c62828; color:#fff; border:none; border-radius:4px;
   padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;
@@ -743,6 +744,43 @@ input:checked + .slider:before { transform:translateX(18px); }
   border-radius:6px; padding:14px; max-height:300px; overflow-y:auto;
   white-space:pre-wrap; word-break:break-all; margin-bottom:12px; border:none; width:100%;
 }
+
+/* ── BREAK SCREEN ─────────────────────────────────────── */
+#break-screen {
+  display:none; position:fixed; inset:0; z-index:850;
+  background:linear-gradient(160deg,#0d1b4e 0%,#1a3a8f 60%,#0d3a6e 100%);
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:20px; color:#fff; text-align:center; padding:40px;
+}
+#break-screen.open { display:flex; }
+#break-screen .brk-eyebrow {
+  font-size:11px; color:#90caf9; letter-spacing:3px; text-transform:uppercase;
+}
+#break-screen .brk-title {
+  font-size:32px; font-weight:800; margin:0; letter-spacing:1px;
+}
+#break-screen .brk-subtitle {
+  font-size:14px; color:#90caf9; margin:0;
+}
+#break-screen .brk-clock {
+  font-family:'Courier New',monospace; font-size:64px; font-weight:700;
+  color:#fff; letter-spacing:6px; line-height:1; padding:16px 28px;
+  background:rgba(0,0,0,.3); border-radius:10px; border:1px solid rgba(79,195,247,.3);
+}
+#break-screen .brk-lock {
+  background:rgba(255,82,82,.12); border:1px solid rgba(255,82,82,.5);
+  border-radius:8px; padding:12px 24px; font-size:13px; color:#ff8a80;
+  max-width:480px; line-height:1.5;
+}
+#btn-start-part2 {
+  background:#43a047; color:#fff; border:none; border-radius:8px;
+  padding:16px 40px; font-size:17px; font-weight:700; cursor:pointer;
+  letter-spacing:.5px; transition:background .2s;
+}
+#btn-start-part2:hover { background:#2e7d32; }
+#break-screen .brk-hint {
+  font-size:12px; color:#7986cb;
+}
 </style>
 </head>
 <body>
@@ -754,18 +792,13 @@ input:checked + .slider:before { transform:translateX(18px); }
     National Medical Admission Test (NMAT)
     <br><span style="font-size:10px;font-weight:400;color:#a5d6a7;">● Auto-saved</span>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div style="display:flex;gap:12px;align-items:center;">
     <div id="test-counter-badge">
       <div class="t-label">Test #</div>
       <div class="t-value" id="test-counter-val">1</div>
     </div>
-    <div class="timer-box">
-      <div class="t-label">Section Time</div>
-      <div class="t-value" id="timer-section">--:--</div>
-    </div>
-    <div class="timer-box">
-      <div class="t-label">Total Time</div>
-      <div class="t-value" id="timer-total">--:--</div>
+    <div class="timer-compact">
+      Section Time:&nbsp;<span id="timer-section">--:--:--</span>
     </div>
   </div>
   <button id="btn-finish-top" onclick="openFinishModal()">Finish Test</button>
@@ -876,6 +909,17 @@ input:checked + .slider:before { transform:translateX(18px); }
 </div>
 
 <!-- ═══ MODAL: FINISH TEST ══════════════════════════════ -->
+<!-- ═══ BREAK SCREEN ══════════════════════════════════════ -->
+<div id="break-screen">
+  <div class="brk-eyebrow">CEM Online Testing System — NMAT</div>
+  <h2 class="brk-title">☕ Break Time</h2>
+  <p class="brk-subtitle">Rest before Part II begins</p>
+  <div class="brk-clock" id="break-timer-display">00:10:00</div>
+  <div class="brk-lock" id="break-msg">Part I answers have been locked. You may not return to Part I.</div>
+  <button id="btn-start-part2" onclick="startPartII()">▶&nbsp; Start Part II Now</button>
+  <p class="brk-hint">Or wait — Part II will start automatically when the countdown reaches zero.</p>
+</div>
+
 <div class="modal-overlay" id="modal-finish">
   <div class="modal-box">
     <h2>Finish Test?</h2>
@@ -1206,8 +1250,11 @@ input:checked + .slider:before { transform:translateX(18px); }
    Time per subtest: Part 1 subtests ~30 min each; Part 2 varies
 ──────────────────────────────────────────────────────────── */
 
+const PART1_TIME = 8100;   // Part I:  2h 15m (135 min)
+const BREAK_TIME = 600;    // Break:   0h 10m  (10 min)
+const PART2_TIME = 5400;   // Part II: 1h 30m  (90 min)
+
 const EXAM_BANK = {
-  totalTime: 19800,  // 5.5 hrs in seconds (Part 1: 3 hrs + Part 2: 2.5 hrs)
 
   /* ── IMAGE PATH CONVENTION ────────────────────────────────
      All images live in a "questions/" folder next to index.html.
@@ -1645,8 +1692,9 @@ function drawFromBank(section, doShuffle) {
 
 const state = {
   exam: [], responses: [], sectionIdx: 0, current: 0,
-  sectionTime: 0, totalTime: EXAM_BANK.totalTime,
-  sectionTimer: null, totalTimer: null,
+  partTime: 0, breakTime: 0,
+  partTimer: null, breakTimer: null,
+  phase: 'part1',  // 'part1' | 'break' | 'part2'
   lastExam: null, testCount: 0,
   reviewFilter: 'all', reviewSectionFilter: 'all',
 };
@@ -1746,29 +1794,30 @@ function buildExam(doShuffle, reuseExact) {
     state.lastExam = state.exam.map(s => ({ ...s, questions: [...s.questions] }));
   }
   state.responses = state.exam.map(s => s.questions.map(() => ({ answer: null, bookmarked: false })));
-  state.totalTime = EXAM_BANK.totalTime;
 
-  const sel = document.getElementById('section-select');
-  sel.innerHTML = '';
-  state.exam.forEach((s, i) => {
-    const opt = document.createElement('option');
-    opt.value = i; opt.textContent = s.name;
-    sel.appendChild(opt);
-  });
+  clearInterval(state.partTimer); clearInterval(state.breakTimer);
+  document.getElementById('break-screen').classList.remove('open');
+  state.phase = 'part1';
+  state.partTime = PART1_TIME;
 
+  rebuildSectionSelect();
   loadSection(0);
-  startTimers();
+  setTimerDisplay(state.partTime);
+  startPartITimer();
 }
 
 function loadSection(idx) {
   state.sectionIdx = idx; state.current = 0;
-  state.sectionTime = state.exam[idx].timeSeconds;
   document.getElementById('section-select').value = idx;
   buildPageStrip(); buildGrid(); renderQuestion(); updateProgress();
-  document.getElementById('timer-section').style.color = '#fff';
 }
 
-function switchSection(idx) { loadSection(parseInt(idx)); }
+function switchSection(idx) {
+  idx = parseInt(idx);
+  if (state.phase === 'part1' && idx >= 4) return;
+  if (state.phase === 'part2' && idx < 4) return;
+  loadSection(idx);
+}
 
 function buildPageStrip() {
   const strip = document.getElementById('page-strip');
@@ -1864,19 +1913,29 @@ function toggleRevisit() {
 function promptNextSection() {
   const resp = state.responses[state.sectionIdx];
   const unanswered = resp.filter(r => !r.answer).length;
-  document.getElementById('modal-section-stats').textContent =
-    unanswered > 0
-      ? `⚠ You have ${unanswered} unanswered item(s). You cannot return to this section.`
-      : `✔ All ${resp.length} items answered in this section.`;
+  const isPartIBoundary = state.phase === 'part1' && state.sectionIdx === 3;
+  let msg = unanswered > 0
+    ? `⚠ ${unanswered} unanswered item(s). `
+    : `✔ All ${resp.length} items answered. `;
+  if (isPartIBoundary) {
+    msg += 'Proceeding will END Part I and start the 10-minute break. You CANNOT return to Part I.';
+  } else {
+    msg += 'You cannot return to this section once you proceed.';
+  }
+  document.getElementById('modal-section-stats').textContent = msg;
   openModal('modal-next-section');
 }
 
 function confirmNextSection() {
   closeModal('modal-next-section');
-  clearInterval(state.sectionTimer);
   const next = state.sectionIdx + 1;
-  if (next < state.exam.length) { loadSection(next); startSectionTimer(); }
-  else openFinishModal();
+  if (state.phase === 'part1' && next >= 4) {
+    showBreakScreen(false);
+  } else if (next < state.exam.length) {
+    loadSection(next);
+  } else {
+    openFinishModal();
+  }
 }
 
 function openFinishModal() {
@@ -1910,7 +1969,7 @@ function goToSummary() {
 function closeSummary() { document.getElementById('summary-page').classList.remove('open'); }
 
 function submitTest() {
-  clearInterval(state.sectionTimer); clearInterval(state.totalTimer);
+  clearInterval(state.partTimer); clearInterval(state.breakTimer);
   document.getElementById('summary-page').classList.remove('open');
   buildResultsPage();
   document.getElementById('results-page').classList.add('open');
@@ -2127,44 +2186,96 @@ function updateProgress() {
   document.getElementById('leg-una').textContent = `${unanswered} Unanswered`;
 }
 
-function fmt(s) {
-  return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+function fmtHMS(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
 }
 
-function startSectionTimer() {
-  clearInterval(state.sectionTimer);
-  document.getElementById('timer-section').style.color = '#fff';
-  state.sectionTimer = setInterval(() => {
-    if (state.sectionTime > 0) {
-      state.sectionTime--;
-      document.getElementById('timer-section').textContent = fmt(state.sectionTime);
-      if (state.sectionTime <= 60) document.getElementById('timer-section').style.color = '#ff5252';
-      if (state.sectionTime === 0) {
-        clearInterval(state.sectionTimer);
-        alert('⏰ Section time is up! Moving to the next section.');
-        confirmNextSection();
+function setTimerDisplay(s) {
+  const el = document.getElementById('timer-section');
+  el.textContent = fmtHMS(s);
+  el.style.color = s <= 300 ? '#ff5252' : '#fff';
+}
+
+function startPartITimer() {
+  clearInterval(state.partTimer);
+  state.partTimer = setInterval(() => {
+    if (state.partTime > 0) {
+      state.partTime--;
+      setTimerDisplay(state.partTime);
+      if (state.partTime === 0) {
+        clearInterval(state.partTimer);
+        showBreakScreen(true);
       }
     }
   }, 1000);
 }
 
-function startTotalTimer() {
-  clearInterval(state.totalTimer);
-  state.totalTimer = setInterval(() => {
-    if (state.totalTime > 0) {
-      state.totalTime--;
-      document.getElementById('timer-total').textContent = fmt(state.totalTime);
-      if (state.totalTime <= 300) document.getElementById('timer-total').style.color = '#ff5252';
-      if (state.totalTime === 0) {
-        clearInterval(state.totalTimer);
-        alert('⏰ Total time is up! Submitting your test.');
+function startPartIITimer() {
+  clearInterval(state.partTimer);
+  state.partTimer = setInterval(() => {
+    if (state.partTime > 0) {
+      state.partTime--;
+      setTimerDisplay(state.partTime);
+      if (state.partTime === 0) {
+        clearInterval(state.partTimer);
         submitTest();
       }
     }
   }, 1000);
 }
 
-function startTimers() { startSectionTimer(); startTotalTimer(); }
+function showBreakScreen(autoTriggered) {
+  clearInterval(state.partTimer);
+  state.phase = 'break';
+  state.breakTime = BREAK_TIME;
+  document.getElementById('break-timer-display').textContent = fmtHMS(state.breakTime);
+  document.getElementById('break-msg').textContent = autoTriggered
+    ? '⏰ Part I time is up! Your Part I answers have been locked. You may not return to Part I.'
+    : '✅ Part I complete. Your Part I answers have been locked. You may not return to Part I.';
+  document.getElementById('break-screen').classList.add('open');
+  startBreakTimer();
+}
+
+function startBreakTimer() {
+  clearInterval(state.breakTimer);
+  state.breakTimer = setInterval(() => {
+    if (state.breakTime > 0) {
+      state.breakTime--;
+      document.getElementById('break-timer-display').textContent = fmtHMS(state.breakTime);
+      if (state.breakTime === 0) {
+        clearInterval(state.breakTimer);
+        startPartII();
+      }
+    }
+  }, 1000);
+}
+
+function startPartII() {
+  clearInterval(state.breakTimer);
+  document.getElementById('break-screen').classList.remove('open');
+  state.phase = 'part2';
+  state.partTime = PART2_TIME;
+  rebuildSectionSelect();
+  loadSection(4);
+  setTimerDisplay(state.partTime);
+  startPartIITimer();
+}
+
+function rebuildSectionSelect() {
+  const sel = document.getElementById('section-select');
+  sel.innerHTML = '';
+  const start = state.phase === 'part2' ? 4 : 0;
+  const end   = state.phase === 'part2' ? state.exam.length : Math.min(4, state.exam.length);
+  for (let i = start; i < end; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = state.exam[i].name;
+    sel.appendChild(opt);
+  }
+}
 
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
