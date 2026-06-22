@@ -1,0 +1,31 @@
+Here's the finalized prompt — ready to paste into Replit Agent:
+
+---
+
+> Add a rationale/explanation system to the NMAT mock exam simulator. Here is the full specification:
+>
+> **1. Storage**
+> Create a new file `artifacts/nmat-exam/public/rationales.json` with the content `{}` (empty object). This file maps question IDs like `"p1_verbal_001"` to explanation strings. It must be served as a static asset just like `answers.json`.
+>
+> **2. Loading**
+> In `index.html`, after loading `answers.json`, also fetch `rationales.json` with `fetch('rationales.json?_=' + Date.now())` and store the result in a global variable `RATIONALES = {}`. If the file is missing or fails to load, silently fall back to an empty object. The question ID is derived from the image filename — for example, `questions/p1_verbal/p1_verbal_001_q.png` corresponds to ID `p1_verbal_001`. Strip the folder prefix and `_q.png` suffix to get the ID.
+>
+> **3. Rationalize button on the Review/Results page**
+> On the exam results page, for every question shown during review, add a button labeled **"💡 Rationalize this Item"**. When clicked:
+> - If `RATIONALES[questionId]` exists: show the rationale text in a styled card directly below the question image (dark background, readable font, scrollable if long).
+> - If no rationale exists: show **"Explanation not yet available for this item."** in the same card.
+> - Clicking the button again toggles the card closed.
+>
+> **4. Rationalize button in the Question Bank Manager**
+> In the BM item editor (the right-side panel where the question image and correct answer are shown), add the same **"💡 Rationalize this Item"** button below the Question Image section. Behavior is identical — toggle a card below the image showing the rationale text or the "not yet available" message. Additionally, in the left-side item list, add a small **💡 indicator icon** next to items that already have a rationale in `RATIONALES`, so it's easy to see at a glance which questions are covered.
+>
+> **5. No changes to exam flow**
+> Do not modify any exam-taking logic, timer, scoring, answer key loading, or question bank probe logic. This feature only reads from `RATIONALES` and never writes to it from the UI.
+>
+> **6. Copy step and documentation**
+> After creating `rationales.json`, also copy it to `artifacts/nmat-exam/dist/public/rationales.json`. Add a note in `replit.md` that every time `rationales.json` is updated in `public/`, it must be copied to `dist/public/` using:
+> `cp artifacts/nmat-exam/public/rationales.json artifacts/nmat-exam/dist/public/rationales.json`
+
+---
+
+That's ready to go. Once Replit Agent implements it, come back here with any question PNG and I'll generate the shell command to permanently store its rationale.

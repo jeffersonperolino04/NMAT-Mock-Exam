@@ -781,6 +781,20 @@ input:checked + .slider:before { transform:translateX(18px); }
 #break-screen .brk-hint {
   font-size:12px; color:#7986cb;
 }
+
+/* ── RATIONALE CARD ───────────────────────────────────── */
+.rationalize-btn {
+  background:#1a2744; color:#90caf9; border:1px solid #4fc3f7;
+  border-radius:4px; padding:6px 14px; font-size:12px; font-weight:600;
+  cursor:pointer; transition:background .15s;
+}
+.rationalize-btn:hover { background:#0d3a6e; }
+.rationale-card {
+  background:#1a2744; border:1px solid #4fc3f7; border-radius:6px;
+  padding:14px 16px; font-size:13px; color:#e3f2fd; line-height:1.7;
+  max-height:300px; overflow-y:auto; margin-top:8px;
+  white-space:pre-wrap; word-break:break-word;
+}
 </style>
 </head>
 <body>
@@ -1156,6 +1170,10 @@ input:checked + .slider:before { transform:translateX(18px); }
               onchange="bmFileInputChange(event,'q')" />
           </div>
         </div>
+        <div style="padding:0 0 8px;">
+          <button id="bm-rationalize-btn" class="rationalize-btn" onclick="bmToggleRationale()">💡 Rationalize this Item</button>
+          <div id="bm-rationale-card" class="rationale-card" style="display:none;"></div>
+        </div>
 
         <div class="bm-form-section">
           <div class="bm-form-section-title">🗂 Choices Image</div>
@@ -1432,6 +1450,9 @@ function bmRenderList() {
 
     const hasImg   = !!q.questionImg;
     const subLabel = hasImg ? truncatePath(q.questionImg) : 'No image set';
+    const bmQId = q.questionImg ? q.questionImg.split('/').pop().replace(/_q\.png$/, '') : null;
+    const rationaleIcon = (bmQId && RATIONALES[bmQId])
+      ? `<span title="Has rationale" style="font-size:11px;flex-shrink:0;line-height:1;">💡</span>` : '';
 
     card.innerHTML = `
       <div class="bm-q-num">${i + 1}</div>
@@ -1439,6 +1460,7 @@ function bmRenderList() {
         <div class="bmi-label">Item ${i + 1}</div>
         <div class="bmi-sub">${subLabel}</div>
       </div>
+      ${rationaleIcon}
       <div class="bm-q-answer">${q.answer || '?'}</div>
       <button class="bm-q-del" title="Delete" onclick="bmDeleteItem(event,${i})">×</button>
     `;
@@ -1480,6 +1502,11 @@ function bmShowEditor(q) {
 
   empty.style.display = 'none';
   form.classList.add('visible');
+
+  // Reset rationale panel when switching items
+  const _brCard = document.getElementById('bm-rationale-card');
+  const _brBtn  = document.getElementById('bm-rationalize-btn');
+  if (_brCard) { _brCard.style.display = 'none'; _brBtn.textContent = '💡 Rationalize this Item'; }
 
   document.getElementById('bm-q-img-path').value = q.questionImg || '';
   document.getElementById('bm-c-img-path').value = q.choicesImg  || '';
@@ -1743,6 +1770,7 @@ async function init() {
   try {
     await autoExpandBank();
     await loadAnswerKey();
+    await loadRationales();
   } catch (e) {
     console.warn('init error (non-fatal):', e);
   }
@@ -2087,6 +2115,22 @@ function renderReviewCards() {
           <div class="review-q-img">${qImgHTML}</div>
           <div class="review-c-img">${cImgHTML}${pillsHTML}</div>
         </div>`;
+      // Rationale button
+      const rQId = q.questionImg ? q.questionImg.split('/').pop().replace(/_q\.png$/, '') : null;
+      if (rQId) {
+        const rWrap = document.createElement('div');
+        rWrap.style.cssText = 'padding:6px 12px 10px;';
+        const rBtn = document.createElement('button');
+        rBtn.className = 'rationalize-btn';
+        rBtn.textContent = '💡 Rationalize this Item';
+        const rCard = document.createElement('div');
+        rCard.className = 'rationale-card';
+        rCard.style.display = 'none';
+        rBtn.onclick = () => toggleRationale(rBtn, rCard, rQId);
+        rWrap.appendChild(rBtn);
+        rWrap.appendChild(rCard);
+        card.appendChild(rWrap);
+      }
       list.appendChild(card);
     });
   });
@@ -2277,6 +2321,34 @@ function rebuildSectionSelect() {
   }
 }
 
+function toggleRationale(btn, card, qId) {
+  if (card.style.display !== 'none') {
+    card.style.display = 'none';
+    btn.textContent = '💡 Rationalize this Item';
+  } else {
+    card.textContent = RATIONALES[qId] || 'Explanation not yet available for this item.';
+    card.style.display = 'block';
+    btn.textContent = '💡 Hide Rationale';
+  }
+}
+
+function bmToggleRationale() {
+  const btn  = document.getElementById('bm-rationalize-btn');
+  const card = document.getElementById('bm-rationale-card');
+  if (card.style.display !== 'none') {
+    card.style.display = 'none';
+    btn.textContent = '💡 Rationalize this Item';
+    return;
+  }
+  const q = bm.draft?.[bm.activeSectionIdx]?.bank?.[bm.activeItemIdx];
+  const qId = (q && q.questionImg)
+    ? q.questionImg.split('/').pop().replace(/_q\.png$/, '')
+    : null;
+  card.textContent = (qId && RATIONALES[qId]) ? RATIONALES[qId] : 'Explanation not yet available for this item.';
+  card.style.display = 'block';
+  btn.textContent = '💡 Hide Rationale';
+}
+
 function openModal(id)  { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -2434,8 +2506,21 @@ function bmBulkAssign(files) {
 }
 
 /* ════════════════════════════════════════════════════════
-   ANSWER KEY  — persistent via public/answers.json
+   ANSWER KEY & RATIONALES  — persistent via public/answers.json and public/rationales.json
 ════════════════════════════════════════════════════════ */
+
+let RATIONALES = {};
+
+async function loadRationales() {
+  try {
+    const res = await fetch('rationales.json?_=' + Date.now());
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && typeof data === 'object' && !Array.isArray(data)) RATIONALES = data;
+  } catch (_) {
+    // rationales.json missing or malformed — silently fall back to empty object
+  }
+}
 
 async function loadAnswerKey() {
   try {
