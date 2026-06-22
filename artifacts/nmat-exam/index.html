@@ -1170,7 +1170,7 @@ input:checked + .slider:before { transform:translateX(18px); }
               onchange="bmFileInputChange(event,'q')" />
           </div>
         </div>
-        <div style="padding:0 0 8px;">
+        <div id="bm-rationalize-wrap" style="padding:0 0 8px;display:none;">
           <button id="bm-rationalize-btn" class="rationalize-btn" onclick="bmToggleRationale()">💡 Rationalize this Item</button>
           <div id="bm-rationale-card" class="rationale-card" style="display:none;"></div>
         </div>
@@ -1451,7 +1451,7 @@ function bmRenderList() {
     const hasImg   = !!q.questionImg;
     const subLabel = hasImg ? truncatePath(q.questionImg) : 'No image set';
     const bmQId = q.questionImg ? q.questionImg.split('/').pop().replace(/_q\.png$/, '') : null;
-    const rationaleIcon = (bmQId && RATIONALES[bmQId])
+    const rationaleIcon = (bmQId && bmQId.startsWith('p2_') && RATIONALES[bmQId])
       ? `<span title="Has rationale" style="font-size:11px;flex-shrink:0;line-height:1;">💡</span>` : '';
 
     card.innerHTML = `
@@ -1503,10 +1503,15 @@ function bmShowEditor(q) {
   empty.style.display = 'none';
   form.classList.add('visible');
 
-  // Reset rationale panel when switching items
+  // Reset rationale panel; only show for Part II questions (p2_*)
   const _brCard = document.getElementById('bm-rationale-card');
   const _brBtn  = document.getElementById('bm-rationalize-btn');
+  const _brWrap = document.getElementById('bm-rationalize-wrap');
   if (_brCard) { _brCard.style.display = 'none'; _brBtn.textContent = '💡 Rationalize this Item'; }
+  if (_brWrap) {
+    const _qId = q.questionImg ? q.questionImg.split('/').pop().replace(/_q\.png$/, '') : '';
+    _brWrap.style.display = _qId.startsWith('p2_') ? 'block' : 'none';
+  }
 
   document.getElementById('bm-q-img-path').value = q.questionImg || '';
   document.getElementById('bm-c-img-path').value = q.choicesImg  || '';
@@ -2115,9 +2120,9 @@ function renderReviewCards() {
           <div class="review-q-img">${qImgHTML}</div>
           <div class="review-c-img">${cImgHTML}${pillsHTML}</div>
         </div>`;
-      // Rationale button
+      // Rationale button — Part II only (p2_*)
       const rQId = q.questionImg ? q.questionImg.split('/').pop().replace(/_q\.png$/, '') : null;
-      if (rQId) {
+      if (rQId && rQId.startsWith('p2_')) {
         const rWrap = document.createElement('div');
         rWrap.style.cssText = 'padding:6px 12px 10px;';
         const rBtn = document.createElement('button');
