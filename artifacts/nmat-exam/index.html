@@ -66,7 +66,8 @@ body {
   height:var(--nav-h); background:#f0f4f8; border-bottom:1px solid var(--cem-border);
   display:flex; align-items:center; padding:0 10px; gap:8px; flex-shrink:0; overflow:hidden;
 }
-#section-select {
+#section-select,
+#skip-select {
   height:30px; border:1px solid var(--cem-border); border-radius:3px; padding:0 6px;
   font-size:12px; background:#fff; cursor:pointer; min-width:180px;
 }
@@ -821,6 +822,8 @@ input:checked + .slider:before { transform:translateX(18px); }
 <!-- ═══ NAV BAR ══════════════════════════════════════════ -->
 <div id="navbar">
   <select id="section-select" onchange="switchSection(this.value)"></select>
+  <label for="skip-select" style="font-size:11px;color:#555;font-weight:700;white-space:nowrap;margin-left:8px;">Skip to Section</label>
+  <select id="skip-select" onchange="skipToSection(this.value)"></select>
   <div class="info-icon" title="Section info" onclick="alert('Use the section dropdown to navigate. Leftover section time does not carry over.')">i</div>
   <div id="page-strip-wrap">
     <button class="strip-arrow" onclick="scrollStrip(-1)">&#8249;</button>
@@ -1842,6 +1845,7 @@ function buildExam(doShuffle, reuseExact) {
 function loadSection(idx) {
   state.sectionIdx = idx; state.current = 0;
   document.getElementById('section-select').value = idx;
+  rebuildSkipSelect();
   buildPageStrip(); buildGrid(); renderQuestion(); updateProgress();
 }
 
@@ -1850,6 +1854,32 @@ function switchSection(idx) {
   if (state.phase === 'part1' && idx >= 4) return;
   if (state.phase === 'part2' && idx < 4) return;
   loadSection(idx);
+}
+
+function skipToSection(idx) {
+  idx = parseInt(idx, 10);
+  if (Number.isNaN(idx) || idx < 0 || idx >= state.exam.length) return;
+
+  if ((state.phase === 'break' || state.phase === 'part2') && idx < 4) return;
+  if (state.phase !== 'part2' && state.phase !== 'break' && idx < state.sectionIdx) return;
+
+  const targetPart = idx < 4 ? 'part1' : 'part2';
+  clearInterval(state.partTimer);
+  clearInterval(state.breakTimer);
+  state.partTimer = null;
+  state.breakTimer = null;
+  document.getElementById('break-screen').classList.remove('open');
+
+  state.phase = targetPart;
+  state.partTime = targetPart === 'part1' ? PART1_TIME : PART2_TIME;
+  loadSection(idx);
+  setTimerDisplay(state.partTime);
+
+  if (targetPart === 'part1') {
+    startPartITimer();
+  } else {
+    startPartIITimer();
+  }
 }
 
 function buildPageStrip() {
@@ -2323,6 +2353,28 @@ function rebuildSectionSelect() {
     opt.value = i;
     opt.textContent = state.exam[i].name;
     sel.appendChild(opt);
+  }
+}
+
+function rebuildSkipSelect() {
+  const sel = document.getElementById('skip-select');
+  if (!sel) return;
+  sel.innerHTML = '';
+
+  const options = (state.phase === 'break' || state.phase === 'part2')
+    ? [4, 5, 6, 7]
+    : [0, 1, 2, 3, 4, 5, 6, 7];
+
+  options.forEach((i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = state.exam[i].name;
+    if (i === state.sectionIdx) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  if (!options.includes(state.sectionIdx)) {
+    sel.value = String(options[0]);
   }
 }
 
